@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/kobesoft-inc/jp-phone-number-db/releases/latest/download/jp_phone_number.schema.json",
+  "title": "日本の電話番号の決まり（jp_phone_number.json）",
+  "description": "総務省「電気通信番号指定状況」を加工して作った、国内の書き方（0 から始まる数字）の電話番号の種類・桁数・区切りの表。",
+  "type": "object",
+  "required": ["format", "version", "generatedAt", "source", "services", "fixed"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "format": {
+      "description": "このファイルの形の版。形を変えたら上げる",
+      "const": 1
+    },
+    "version": {
+      "description": "データの版。中身が変わったときの総務省のページの時点（YYYY-MM-DD）",
+      "$ref": "#/$defs/date"
+    },
+    "generatedAt": {
+      "description": "作った日時（UTC）",
+      "type": "string",
+      "format": "date-time"
+    },
+    "source": {
+      "type": "object",
+      "required": ["publisher", "title", "page", "asOf", "license", "licenseUrl", "credit", "files", "rows"],
+      "properties": {
+        "publisher": { "const": "総務省" },
+        "title": { "type": "string" },
+        "page": { "type": "string", "format": "uri" },
+        "asOf": { "description": "ページの時点", "$ref": "#/$defs/date" },
+        "license": { "type": "string" },
+        "licenseUrl": { "type": "string", "format": "uri" },
+        "credit": { "description": "使うときに書く出典", "type": "string" },
+        "files": {
+          "description": "元にした「N から始まる市外局番」の Excel（9 つ）",
+          "type": "array",
+          "minItems": 9,
+          "maxItems": 9,
+          "items": {
+            "type": "object",
+            "required": ["title", "url", "asOf", "date", "rows"],
+            "properties": {
+              "title": { "type": "string", "pattern": "^[1-9]から始まる市外局番$" },
+              "url": { "type": "string", "format": "uri" },
+              "asOf": { "description": "ファイルに書いてある日付（和暦のまま）", "type": "string" },
+              "date": { "description": "asOf を YYYY-MM-DD にしたもの", "$ref": "#/$defs/date" },
+              "rows": { "description": "番号ブロック（6 桁）の行の数", "type": "integer", "minimum": 1 }
+            },
+            "additionalProperties": false
+          }
+        },
+        "rows": { "description": "番号ブロックの行の合計", "type": "integer", "minimum": 1 }
+      },
+      "additionalProperties": false
+    },
+    "services": {
+      "description": "市外局番を使わない番号。頭（prefix）は長く当たるものが勝つ（0800 は 080 より先）",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["prefix", "kind", "label", "length", "groups", "designated"],
+        "properties": {
+          "prefix": { "type": "string", "pattern": "^0[0-9]{2,3}$" },
+          "kind": { "enum": ["mobile", "ip", "m2m", "fmc", "toll_free", "shared_cost", "mass_calling", "premium"] },
+          "label": { "type": "string" },
+          "length": { "description": "0 を含めた桁数", "type": "integer", "minimum": 10, "maximum": 14 },
+          "groups": { "description": "ハイフンで区切る桁", "type": "array", "items": { "type": "integer", "minimum": 1 } },
+          "designated": { "description": "総務省のページで事業者への指定があるか（「指定なし」なら false）", "type": "boolean" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "fixed": {
+      "description": "固定電話（10 桁）",
+      "type": "object",
+      "required": ["kind", "label", "length", "subscriberFirstDigits", "areaCodes", "areaCodeLength"],
+      "properties": {
+        "kind": { "const": "fixed" },
+        "label": { "type": "string" },
+        "length": { "const": 10 },
+        "subscriberFirstDigits": { "description": "市内局番の頭に来てよい数字", "type": "string", "pattern": "^[1-9]+$" },
+        "areaCodes": {
+          "description": "市外局番（0 を含む）の一覧",
+          "type": "array",
+          "items": { "type": "string", "pattern": "^0[0-9]{1,4}$" }
+        },
+        "areaCodeLength": {
+          "description": "頭 → 市外局番の桁数（0 を含む）。番号に当たる頭のうち、いちばん長いものを使う",
+          "type": "object",
+          "propertyNames": { "pattern": "^0[0-9]{0,5}$" },
+          "additionalProperties": { "type": "integer", "minimum": 2, "maximum": 5 }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "date": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" }
+  }
+}

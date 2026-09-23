@@ -1,0 +1,15 @@
+{
+  "name": "jp-phone-number-db",
+  "private": true,
+  "description": "総務省「電気通信番号指定状況」から日本の電話番号の決まり（市外局番の桁・番号の種類）を作るツール",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=22.5"
+  },
+  "scripts": {
+    "build": "node build.mjs",
+    "check": "node check.mjs",
+    "test": "node --test test/"
+  }
+}

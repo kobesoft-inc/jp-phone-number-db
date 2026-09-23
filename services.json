@@ -1,0 +1,17 @@
+{
+  "$comment": "市外局番を使わない番号の桁数と区切り。電気通信番号計画（令和元年総務省告示第6号）の別表から手で書く（Excel には桁数が無いため）。告示が変わったらここを直す。designated（指定の有無）は build.mjs が総務省のページから埋める。頭（prefix）は長く当たるものが勝つ（0800 は 080 より先）。",
+  "services": [
+    { "prefix": "060", "kind": "mobile", "label": "携帯電話", "length": 11, "groups": [3, 4, 4] },
+    { "prefix": "070", "kind": "mobile", "label": "携帯電話・PHS", "length": 11, "groups": [3, 4, 4] },
+    { "prefix": "080", "kind": "mobile", "label": "携帯電話", "length": 11, "groups": [3, 4, 4] },
+    { "prefix": "090", "kind": "mobile", "label": "携帯電話", "length": 11, "groups": [3, 4, 4] },
+    { "prefix": "050", "kind": "ip", "label": "IP 電話", "length": 11, "groups": [3, 4, 4] },
+    { "prefix": "020", "kind": "m2m", "label": "データ通信（M2M）", "length": 11, "groups": [3, 4, 4] },
+    { "prefix": "0200", "kind": "m2m", "label": "データ通信（M2M・14 桁）", "length": 14, "groups": [4, 5, 5] },
+    { "prefix": "0120", "kind": "toll_free", "label": "フリーダイヤル", "length": 10, "groups": [4, 3, 3] },
+    { "prefix": "0800", "kind": "toll_free", "label": "フリーダイヤル", "length": 11, "groups": [4, 3, 4] },
+    { "prefix": "0570", "kind": "shared_cost", "label": "ナビダイヤル", "length": 10, "groups": [4, 3, 3] },
+    { "prefix": "0180", "kind": "mass_calling", "label": "テレドーム", "length": 10, "groups": [4, 3, 3] },
+    { "prefix": "0990", "kind": "premium", "label": "情報料代理徴収", "length": 10, "groups": [4, 3, 3] }
+  ]
+}

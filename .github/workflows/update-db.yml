@@ -1,0 +1,119 @@
+name: Update phone number database
+
+on:
+  schedule:
+    # 毎日 00:00 UTC (= 09:00 JST)。総務省の更新は月に 1 回程度なので、ほとんどの日は何もしない
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "中身に変化がなくてもリリースを作成する"
+        type: boolean
+        default: false
+      allow_large_change:
+        description: "市外局番・頭の決まりが大きく減った・変わった場合でも止めない（差分を確認した上で）"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-db
+  cancel-in-progress: false
+
+jobs:
+  update-db:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Test
+        run: node --test test/
+
+      - name: Build
+        run: node build.mjs
+
+      - name: Check and compare with the committed data
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ARGS=()
+          if [ "${{ github.event.inputs.allow_large_change }}" = "true" ]; then
+            ARGS+=(--allow-large-change)
+          fi
+          node check.mjs "${ARGS[@]}" | tee check.log
+
+          RELEASED_TAG="$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName -q .tagName 2>/dev/null || true)"
+          if [ -z "$RELEASED_TAG" ]; then
+            echo "リリースがまだ無いため作成します"
+            echo "release=true" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event.inputs.force }}" = "true" ]; then
+            echo "forceが指定されたため、変化なしでもリリースを作成します"
+            echo "release=true" >> "$GITHUB_OUTPUT"
+          else
+            grep -q '^changed=true' "$GITHUB_OUTPUT" && echo "release=true" >> "$GITHUB_OUTPUT" || echo "release=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Commit data
+        if: steps.check.outputs.release == 'true'
+        run: |
+          cp dist/jp_phone_number.json jp_phone_number.json
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add jp_phone_number.json
+          if git diff --cached --quiet; then
+            echo "コミットする変化なし"
+          else
+            git commit -m "Update data (${{ steps.check.outputs.version }})"
+            git push
+          fi
+
+      - name: Create GitHub Release
+        id: release
+        if: steps.check.outputs.release == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.check.outputs.version }}
+        run: |
+          TAG="db-${VERSION}"
+          CREDIT="$(node -p "require('./dist/jp_phone_number.json').source.credit")"
+          {
+            echo "総務省「電気通信番号指定状況」の ${VERSION} 時点のページから作成しました。"
+            echo
+            grep '^- ' check.log || true
+            echo
+            echo "出典: ${CREDIT}"
+          } > notes.md
+          gh release delete "$TAG" --repo "$GITHUB_REPOSITORY" --yes --cleanup-tag 2>/dev/null || true
+          gh release create "$TAG" \
+            dist/jp_phone_number.json dist/jp_phone_number.db dist/jp_phone_number.schema.json dist/SHA256SUMS \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$(git rev-parse HEAD)" \
+            --title "電話番号データ ${VERSION}" \
+            --notes-file notes.md
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Delete old releases (keep latest only)
+        if: steps.check.outputs.release == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CURRENT_TAG: ${{ steps.release.outputs.tag }}
+        run: |
+          for TAG in $(gh release list --repo "$GITHUB_REPOSITORY" --json tagName -q '.[].tagName'); do
+            if [ "$TAG" != "$CURRENT_TAG" ]; then
+              echo "古いリリースを削除: $TAG"
+              gh release delete "$TAG" --repo "$GITHUB_REPOSITORY" --yes --cleanup-tag
+            fi
+          done
