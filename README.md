@@ -181,7 +181,7 @@ Node.js 22.5 以上のみで動作します（追加の依存ライブラリは�
 ```bash
 node build.mjs          # dist/ に jp_phone_number.json・.db・.schema.json・SHA256SUMS を出す
 node check.mjs          # 決まりに合うか・前回（./jp_phone_number.json）との違いを見る
-node --test test/       # テスト
+node --test test/*.test.mjs       # テスト
 ```
 
 総務省のページから「1から始まる市外局番」〜「9から始まる市外局番」の Excel（.xls）の場所を毎回
